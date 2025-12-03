@@ -1,0 +1,1697 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE ENDER HAUNT</title>
+    <!-- New Minimalist Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        /* The custom Stranger Things font is removed */
+        
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Courier New', Courier, monospace;
+            user-select: none;
+            /* Pulsing dark background */
+            background: radial-gradient(circle at center, #1a001a 0%, #000000 90%);
+            animation: pulseBg 10s infinite alternate;
+        }
+
+        @keyframes pulseBg {
+            0% { background: radial-gradient(circle at center, #1a001a 0%, #000000 90%); }
+            100% { background: radial-gradient(circle at center, #2a002a 0%, #050005 90%); }
+        }
+
+        /* Standard HD Rendering */
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            transition: filter 2s ease-out; /* For Wasted effect */
+        }
+
+        /* --- LAYOUT & UI --- */
+
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none; /* Default: clicks pass through to game */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #crosshair {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 4px;
+            height: 4px;
+            background-color: lime;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 4px lime;
+            transition: transform 0.1s;
+        }
+
+        #crosshair.firing {
+            transform: translate(-50%, -50%) scale(2);
+            background-color: red;
+            box-shadow: 0 0 8px red;
+        }
+
+        #hud-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            text-align: left;
+            pointer-events: none;
+        }
+
+        #score-hud, #level-hud {
+            color: lime;
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 5px;
+        }
+
+        #level-hud {
+            color: #ffff00;
+        }
+
+        /* Health HUD Container */
+        #health-hud {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+            pointer-events: none;
+        }
+
+        /* Health Text */
+        #health-label {
+            color: #d400ff; /* Purple for health label now */
+            font-size: 24px;
+            text-shadow: 2px 2px 0 #000;
+            margin-bottom: 2px;
+        }
+
+        /* Retro Health Bar Background */
+        #health-bar-container {
+            width: 200px;
+            height: 20px;
+            background-color: #220022;
+            border: 2px solid #550055;
+            box-shadow: 2px 2px 0 #000;
+            position: relative;
+        }
+
+        /* The Bar Itself */
+        #health-bar {
+            width: 100%;
+            height: 100%;
+            background-color: #d400ff; /* Purple health bar */
+            transition: width 0.1s steps(5);
+        }
+
+        /* --- SCREENS --- */
+
+        /* Landing Page (Main Menu) */
+        #landing-page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100; /* Highest priority */
+            pointer-events: auto;
+            transition: opacity 1s ease-out; /* Fade out */
+        }
+
+        /* Sunrise Animation Class */
+        #landing-page.sunrise {
+            animation: sunriseAnim 1.5s forwards;
+        }
+
+        @keyframes sunriseAnim {
+            0% { background: #000; }
+            50% { background: #552200; }
+            100% { background: #ffaa00; opacity: 0; } /* Fade to bright orange then transparent */
+        }
+
+        /* Minimalist Title Styling */
+        #landing-title {
+            font-family: 'Inter', sans-serif; /* New minimalist font */
+            color: #ffffff; /* Bright white for clean contrast */
+            font-size: 10vw; 
+            text-align: center;
+            line-height: 0.9;
+            margin-bottom: 0px; 
+            position: relative;
+            font-weight: 900; /* Extra bold */
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.2); /* Subtle shadow for depth */
+            animation: none; /* Remove flicker */
+        }
+
+        #landing-subtitle {
+            font-family: 'Inter', sans-serif; /* New minimalist font */
+            color: #aaaaaa; /* Gray/Silver subtitle */
+            font-size: 3vw;
+            text-align: center;
+            margin-top: 5px; /* Adjust spacing */
+            font-weight: 700;
+            text-shadow: none; /* Remove glow */
+            animation: none; /* Remove flicker */
+        }
+
+        /* Player Name Input/Scoreboard Styles */
+        #name-setup {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        #name-label {
+            font-family: 'Inter', sans-serif;
+            color: #ffffff;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        #player-name-input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #ffffff;
+            color: #ffffff;
+            padding: 8px 15px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 16px;
+            text-align: center;
+            width: 200px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+        }
+        
+        .mini-btn {
+            background: transparent;
+            border: 1px solid #aaaaaa;
+            color: #aaaaaa;
+            padding: 5px 15px;
+            cursor: pointer;
+            font-family: 'Courier New', Courier, monospace;
+            transition: all 0.2s;
+            border-radius: 4px;
+        }
+
+        .mini-btn:hover {
+            border-color: #ffffff;
+            color: #ffffff;
+        }
+
+        #scoreboard-container {
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #555555;
+            width: 80%;
+            max-width: 400px;
+            text-align: left;
+            border-radius: 8px;
+        }
+
+        #scoreboard-container h3 {
+            font-family: 'Inter', sans-serif;
+            color: #d400ff;
+            font-size: 18px;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-weight: 700;
+        }
+
+        #high-scores {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            font-family: 'Courier New', Courier, monospace;
+            color: #ffffff;
+            font-size: 14px;
+        }
+
+        #high-scores li {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px dashed #2a002a;
+        }
+
+        #high-scores li:last-child {
+            border-bottom: none;
+        }
+
+        .score-name {
+            color: #ffff00;
+        }
+
+        .score-details {
+            color: #aaa;
+        }
+
+        .current-player-score {
+            font-weight: bold;
+            color: #d400ff; /* Highlight the current player's score on the list */
+        }
+
+
+        #landing-btn {
+            background: transparent;
+            border: 1px solid #ffffff; /* White border */
+            color: #ffffff; /* White text */
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 24px;
+            padding: 12px 30px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px; /* Less aggressive spacing */
+            transition: all 0.3s;
+            text-shadow: none; /* Remove glow */
+            box-shadow: none; /* Remove excessive shadow */
+            margin-top: 30px; /* Reduced margin due to scoreboard */
+            border-radius: 4px;
+        }
+
+        #landing-btn:hover {
+            background: #ffffff;
+            color: black;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5); /* Subtle white hover glow */
+        }
+
+
+        /* Pause Screen (Appears on ESC) */
+        #pause-screen {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border: 1px solid #333;
+            color: #aaa;
+            pointer-events: auto;
+            cursor: pointer;
+            display: none; /* Hidden by default */
+        }
+        
+        /* WASTED Screen */
+        #wasted-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5); /* Semi-transparent black */
+            pointer-events: auto;
+            opacity: 0;
+            transition: opacity 1s ease-in;
+            z-index: 90;
+        }
+
+        #wasted-text {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-weight: 900;
+            font-size: 100px;
+            color: #cc0000; /* GTA Red */
+            text-transform: uppercase;
+            text-shadow: 4px 4px 0px #000, -1px -1px 0 #000;
+            letter-spacing: -2px;
+            transform: scale(1.5);
+            opacity: 0;
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.5s ease-in;
+        }
+
+        /* When active */
+        #wasted-screen.active {
+            opacity: 1;
+        }
+        
+        #wasted-screen.active #wasted-text {
+            transform: scale(1);
+            opacity: 1;
+        }
+        
+        .wasted-details {
+            margin-top: 20px;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
+            text-shadow: 2px 2px 0 #000;
+            opacity: 0;
+            transition: opacity 1s ease-in 1s; /* Delay appearance */
+            padding: 20px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #555;
+            border-radius: 8px;
+        }
+        
+        #wasted-screen.active .wasted-details {
+            opacity: 1;
+        }
+        
+        #wasted-player-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #d400ff;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px #8a00b6;
+        }
+
+
+        .hidden { display: none !important; }
+
+        /* VFX */
+        #flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            transition: opacity 0.05s;
+            pointer-events: none;
+        }
+        
+        #damage-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            box-shadow: inset 0 0 0 0 #800080;
+            transition: box-shadow 0.2s;
+            pointer-events: none;
+        }
+        
+        /* NEW: Death Flash Effect Class */
+        #damage-overlay.death-flash {
+            box-shadow: inset 0 0 100px 50px rgba(255, 0, 0, 1.0) !important;
+            transition: box-shadow 0.05s ease-out; /* Fast flash */
+        }
+
+        @keyframes scanlineMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100%; }
+        }
+
+        #scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                to bottom,
+                rgba(255,255,255,0),
+                rgba(255,255,255,0) 50%,
+                rgba(100,0,150,0.05) 50%,
+                rgba(100,0,150,0.05)
+            );
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 50;
+            animation: scanlineMove 10s linear infinite;
+        }
+
+        .ghost-speech {
+            position: absolute;
+            color: #d400ff;
+            background: rgba(0,0,0,0.7);
+            padding: 5px;
+            border: 1px solid #9900cc;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none;
+            transform: translate(-50%, -100%);
+            white-space: nowrap;
+            text-shadow: 1px 1px 0 #000;
+            opacity: 0.8;
+            transition: top 0.1s, left 0.1s;
+        }
+
+        /* UPDATED DEATH MESSAGE STYLING */
+        #death-message {
+            font-style: italic;
+            color: #ea8df7;
+            font-size: 20px; /* Slightly larger */
+            min-height: 40px;
+            margin: 20px 0;
+            text-shadow: 0 0 10px #d400ff; /* Glowing text */
+            font-weight: bold;
+        }
+
+        #retry-btn {
+            background: #220022;
+            border: 1px solid #880088;
+            color: white;
+            padding: 10px 20px;
+            margin-top: 20px;
+            font-family: inherit;
+            cursor: pointer;
+            pointer-events: auto;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-radius: 4px;
+        }
+        #retry-btn:hover {
+            background: #500050;
+            border-color: #d400ff;
+            box-shadow: 0 0 10px #d400ff;
+        }
+
+        #level-up-msg {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #ffff00;
+            font-size: 60px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #d400ff;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s;
+            z-index: 20;
+        }
+
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="flash"></div>
+    <div id="damage-overlay"></div>
+    <div id="scanlines"></div>
+    <div id="level-up-msg">LEVEL UP!</div>
+    <div id="bubble-container"></div>
+
+    <!-- LANDING PAGE -->
+    <div id="landing-page">
+        <h1 id="landing-title">ENDERMAN</h1>
+        <h2 id="landing-subtitle">HUNTER</h2>
+        
+        <!-- Player Name Input/Display -->
+        <div id="name-setup">
+            <label for="player-name-input" id="name-label">Enter Hunter Name (max 15 chars):</label>
+            <input type="text" id="player-name-input" maxlength="15" value="Player1">
+            <button id="set-name-btn" class="mini-btn">Set Name</button>
+        </div>
+
+        <!-- Scoreboard Display -->
+        <div id="scoreboard-container">
+            <h3>Local Leaderboard</h3>
+            <ul id="high-scores">
+                <!-- Scores will be injected here -->
+            </ul>
+        </div>
+        
+        <!-- Loading/Status Message -->
+        <p id="loading-status" style="color: #d400ff; font-family: 'Inter', sans-serif; font-weight: 700; margin-top: 20px;">Loading...</p>
+
+        <button id="landing-btn">START</button>
+    </div>
+
+    <div id="ui-layer">
+        <div id="hud-container" class="hidden">
+            <div id="score-hud">KILLS: 0</div>
+            <div id="level-hud">LEVEL: 1</div>
+        </div>
+        
+        <div id="health-hud" class="hidden">
+            <div id="health-label">SANITY: <span id="health-val">100</span>%</div>
+            <div id="health-bar-container">
+                <div id="health-bar"></div>
+            </div>
+        </div>
+
+        <div id="crosshair" class="hidden"></div>
+        
+        <!-- PAUSE SCREEN -->
+        <div id="pause-screen">
+            <h1>PAUSED</h1>
+            <p>Click to Resume Simulation</p>
+        </div>
+        
+        <!-- WASTED SCREEN -->
+        <div id="wasted-screen" class="hidden">
+            <div id="wasted-text">WASTED</div>
+            <div class="wasted-details">
+                <p id="wasted-player-name"></p> <!-- Player name added here -->
+                <p id="final-score">KILLS: 0</p>
+                <p id="final-level">REACHED LEVEL 1</p>
+                <br>
+                <!-- No box, just the message directly -->
+                <p id="death-message">Calculating your fate...</p>
+                <br>
+                <button id="retry-btn">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Three.js Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" onerror="console.error('Failed to load Three.js core.')"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/libs/fflate.min.js" onerror="console.error('Failed to load fflate.')"></script>
+    <!-- Removed FBXLoader.js since it points to an inaccessible local file structure -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/FBXLoader.js" onerror="console.error('Failed to load FBXLoader.')"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js" onerror="console.error('Failed to load PointerLockControls.')"></script>
+
+    <script>
+        // Global error handler to catch uncaught exceptions and keep the UI visible
+        window.onerror = function(message, source, lineno, colno, error) {
+            console.warn("Game Warn:", message, source, lineno, colno, error);
+            // FIX: Don't show the fatal error screen for every small error. 
+            // Only initialization failures should block the game.
+            return false; 
+        };
+
+
+        // --- CONFIG ---
+        const BASE_GHOST_SPEED = 3.5;
+        const BASE_SPAWN_RATE = 2000; 
+        const GUN_RANGE = 40;
+        const GUN_COOLDOWN = 10; 
+        // CHANGED: Removed the problematic FBX model path. The game will now ONLY use the fallback model.
+        const GHOST_FILE_PATH = 'REMOVED_FBX_DEPENDENCY'; 
+        const PLAYER_SPEED = 3.5; // Movement speed (Reduced from 10.0 for better control)
+        const PLAYER_HEIGHT = -0.5; // Player height above floor plane (-2.1)
+        
+        // The API key is provided by the canvas environment automatically.
+        const apiKey = ""; 
+        const CHATTER_INTERVAL = 8000; 
+        const VOICE_INTERVAL = 15000; 
+        let chatterTimer = 0;
+        let voiceTimer = 0;
+        
+        // --- GLOBALS ---
+        let scene, camera, renderer, controls;
+        let ghosts = [];
+        let particlesMesh;
+        let gunModel;
+        let lastTime = performance.now();
+        let spawnTimer = 0;
+        let gunCooldownTimer = 0;
+        let score = 0;
+        let health = 100;
+        let isGameActive = false;
+        let isWasted = false; // New state for slowmo
+        
+        let currentLevel = 1;
+        let killsToNextLevel = 5; // Reduced to 5 as requested
+        
+        const raycaster = new THREE.Raycaster();
+        const screenCenter = new THREE.Vector2(0, 0);
+
+        let ghostModel = null; 
+        let playerName = "Player1"; // Initial default name
+
+        let whisperCache = [
+            "Look at me...",
+            "Taking it...",
+            "Vwoop...",
+            "Staring...",
+            "The End..."
+        ];
+
+        // --- SCOREBOARD LOGIC ---
+
+        function loadScoreboard() {
+            try {
+                const scores = JSON.parse(localStorage.getItem('enderHunterScores')) || [];
+                // Sort by score descending, then by timestamp descending (for ties)
+                return scores.sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+            } catch (e) {
+                console.error("Error loading scoreboard:", e);
+                return [];
+            }
+        }
+
+        function saveScoreboard(newScore, newLevel) {
+            let scores = loadScoreboard();
+            
+            // Add new score
+            scores.push({ name: playerName, score: newScore, level: newLevel, timestamp: Date.now() });
+            
+            // Sort and keep only top 5
+            scores.sort((a, b) => b.score - a.score || b.timestamp - a.timestamp);
+            scores = scores.slice(0, 5); // Limit set to 5
+            
+            try {
+                localStorage.setItem('enderHunterScores', JSON.stringify(scores));
+            } catch (e) {
+                console.error("Error saving scoreboard:", e);
+            }
+            
+            return scores;
+        }
+
+        function renderScoreboard(scores) {
+            const list = document.getElementById('high-scores');
+            if (!list) return;
+
+            list.innerHTML = '';
+            
+            if (scores.length === 0) {
+                list.innerHTML = '<li>No scores yet. Be the first hunter!</li>';
+                return;
+            }
+            
+            scores.forEach((s, index) => {
+                const li = document.createElement('li');
+                // Highlight the current player's score if it's the latest one just added
+                const isCurrentPlayer = s.name === playerName && (s.score === score || index === 0); 
+                li.className = isCurrentPlayer ? 'current-player-score' : '';
+                li.innerHTML = `
+                    <span>${index + 1}. <span class="score-name">${s.name.substring(0, 15)}</span></span>
+                    <span class="score-details">Kills: ${s.score} (Lvl ${s.level})</span>
+                `;
+                list.appendChild(li);
+            });
+        }
+
+
+        // --- MOVEMENT CONTROLS ---
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        
+        function setupControls() {
+            document.addEventListener('keydown', onKeyDown, false);
+            document.addEventListener('keyup', onKeyUp, false);
+        }
+
+        function onKeyDown(event) {
+            switch (event.code) {
+                case 'KeyW':
+                    moveForward = true;
+                    break;
+                case 'KeyA':
+                    moveLeft = true;
+                    break;
+                case 'KeyS':
+                    moveBackward = true;
+                    break;
+                case 'KeyD':
+                    moveRight = true;
+                    break;
+            }
+        }
+
+        function onKeyUp(event) {
+            switch (event.code) {
+                case 'KeyW':
+                    moveForward = false;
+                    break;
+                case 'KeyA':
+                    moveLeft = false;
+                    break;
+                case 'KeyS':
+                    moveBackward = false;
+                    break;
+                case 'KeyD':
+                    moveRight = false;
+                    break;
+            }
+        }
+        
+        function updateMovement(delta) {
+            if (!controls.isLocked || isWasted) return;
+
+            const actualSpeed = PLAYER_SPEED * delta;
+            
+            // Dampen velocity to simulate friction/inertia
+            velocity.x -= velocity.x * 10.0 * delta;
+            velocity.z -= velocity.z * 10.0 * delta;
+
+            direction.z = Number(moveForward) - Number(moveBackward);
+            direction.x = Number(moveRight) - Number(moveLeft);
+            direction.normalize(); // Ensure diagonal movement isn't faster
+
+            if (moveForward || moveBackward) velocity.z -= direction.z * actualSpeed;
+            if (moveLeft || moveRight) velocity.x -= direction.x * actualSpeed;
+
+            // Apply movement using PointerLockControls utility functions
+            controls.moveRight(-velocity.x);
+            controls.moveForward(-velocity.z);
+
+            // Keep the player grounded (fixed Y position)
+            camera.position.y = PLAYER_HEIGHT; // Set player height 
+        }
+
+        // --- SOUND SYSTEM ---
+        const SoundSystem = {
+            ctx: null,
+            init: function() {
+                if (!this.ctx) {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            },
+            playShoot: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                const filter = this.ctx.createBiquadFilter();
+                
+                const bufferSize = this.ctx.sampleRate * 0.1;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+                
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                noise.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+                
+                filter.type = 'lowpass';
+                filter.frequency.setValueAtTime(1000, this.ctx.currentTime);
+                filter.frequency.linearRampToValueAtTime(100, this.ctx.currentTime + 0.1);
+                
+                gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                
+                noise.start();
+            },
+            playHit: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.1);
+            },
+            playHurt: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(50, this.ctx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.2);
+            },
+            playWasted: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                // Slow, descending drone
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 2); // Drop pitch
+                
+                gain.gain.setValueAtTime(0.5, this.ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 2);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 2);
+            },
+            playLevelUp: function() {
+                if (!this.ctx) return;
+                const gain = this.ctx.createGain();
+                gain.gain.value = 0.2;
+                gain.connect(this.ctx.destination);
+                const notes = [440, 554, 659, 880];
+                let time = this.ctx.currentTime;
+                notes.forEach(freq => {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'square';
+                    osc.frequency.value = freq;
+                    osc.connect(gain);
+                    osc.start(time);
+                    osc.stop(time + 0.1);
+                    time += 0.1;
+                });
+            },
+            playGeminiAudio: function(base64Data, sampleRate = 24000) {
+                if (!this.ctx) return;
+                try {
+                    const binaryString = window.atob(base64Data);
+                    const len = binaryString.length;
+                    const bytes = new Uint8Array(len);
+                    for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+                    const int16Data = new Int16Array(bytes.buffer);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) float32Data[i] = int16Data[i] / 32768.0;
+
+                    const audioBuffer = this.ctx.createBuffer(1, float32Data.length, sampleRate);
+                    audioBuffer.getChannelData(0).set(float32Data);
+
+                    const source = this.ctx.createBufferSource();
+                    source.buffer = audioBuffer;
+                    const gain = this.ctx.createGain();
+                    gain.gain.value = 0.8; 
+                    source.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    source.start();
+                } catch (e) {
+                    console.error("Error playing Gemini audio:", e);
+                }
+            }
+        };
+
+        // --- INIT ---
+        function init() {
+            const loadingStatus = document.getElementById('loading-status');
+            loadingStatus.innerText = "Initializing 3D Environment...";
+            
+            // Diagnostics check: Verify Three.js core and controls loaded
+            if (typeof THREE === 'undefined' || typeof THREE.PointerLockControls === 'undefined') {
+                loadingStatus.innerText = "CRITICAL: Three.js dependencies failed to load.";
+                document.getElementById('landing-btn').disabled = true;
+                return;
+            }
+            loadingStatus.innerText = "3D Environment Loaded. Ready.";
+
+            scene = new THREE.Scene();
+            scene.background = null; 
+            scene.fog = new THREE.FogExp2(0x1a001a, 0.035); // Updated fog color to match bg
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight); 
+            renderer.setPixelRatio(window.devicePixelRatio); 
+            document.body.appendChild(renderer.domElement);
+
+            const ambientLight = new THREE.AmbientLight(0x302040); // Updated ambient to purple
+            scene.add(ambientLight);
+
+            const spotLight = new THREE.SpotLight(0xffffee, 1.5, 30, Math.PI / 5, 0.5, 1);
+            spotLight.position.set(0, 0, 0);
+            spotLight.target.position.set(0, 0, -1);
+            camera.add(spotLight);
+            camera.add(spotLight.target);
+            scene.add(camera);
+            
+            // Set initial camera height (player height)
+            camera.position.y = PLAYER_HEIGHT; 
+
+            // Environment
+            // Updated grid color to purple/magenta
+            const gridHelper = new THREE.GridHelper(200, 50, 0xaa00ff, 0x220033);
+            gridHelper.position.y = -2;
+            scene.add(gridHelper);
+
+            const floorGeo = new THREE.PlaneGeometry(200, 200);
+            // Dark floor to blend with void
+            const floorMat = new THREE.MeshBasicMaterial({ color: 0x050005 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.position.y = -2.1; 
+            scene.add(floor);
+
+            createParticles();
+            createGun();
+
+            controls = new THREE.PointerLockControls(camera, document.body);
+            setupControls(); // Initialize keyboard listeners
+            
+            // Load player name from local storage or use default
+            playerName = localStorage.getItem('enderHunterName') || "Hunter_" + Math.floor(Math.random() * 999);
+            document.getElementById('player-name-input').value = playerName;
+
+            // Load and render initial scoreboard
+            renderScoreboard(loadScoreboard());
+
+            // --- UI LOGIC ---
+            const landingPage = document.getElementById('landing-page');
+            const landingBtn = document.getElementById('landing-btn');
+            const setNameBtn = document.getElementById('set-name-btn'); 
+            const pauseScreen = document.getElementById('pause-screen');
+            const wastedScreen = document.getElementById('wasted-screen');
+            const retryBtn = document.getElementById('retry-btn');
+            const hudHealth = document.getElementById('health-hud');
+            const hudScore = document.getElementById('hud-container');
+            const crosshair = document.getElementById('crosshair');
+            
+            // FIX: Add explicit click listener to the renderer area to ensure Pointer Lock / Audio resume work reliably
+            renderer.domElement.addEventListener('click', () => {
+                // If on landing page, let the button handle it
+                if (landingPage.style.display !== 'none') return;
+                
+                // If unlocked (paused or game over), attempt to lock and resume audio
+                if (!controls.isLocked) {
+                    SoundSystem.init(); // Resume audio context
+                    controls.lock();
+                }
+            });
+
+
+            // NEW: Set Name Button Listener
+            setNameBtn.addEventListener('click', () => {
+                const input = document.getElementById('player-name-input');
+                const newName = input.value.trim().substring(0, 15);
+                if (newName) {
+                    playerName = newName;
+                    localStorage.setItem('enderHunterName', playerName);
+                    input.value = playerName; // Update input field if truncated
+                    renderScoreboard(loadScoreboard()); // Rerender in case name matches existing score
+                }
+            });
+
+            // 1. Landing Page Button - Triggers Sunrise and Start
+            landingBtn.addEventListener('click', () => {
+                // Ensure name is set before starting
+                const input = document.getElementById('player-name-input');
+                const newName = input.value.trim().substring(0, 15);
+                if (newName) {
+                    playerName = newName;
+                    localStorage.setItem('enderHunterName', playerName);
+                    input.value = playerName;
+                }
+
+                // FIX 1: Initialize AudioContext immediately upon user gesture
+                SoundSystem.init();
+
+                landingPage.classList.add('sunrise'); // Trigger CSS animation
+                
+                // Wait for animation (1.5s) then start game
+                setTimeout(() => {
+                    landingPage.style.display = 'none'; // CRITICAL: Ensure it's hidden after fade
+                    landingPage.classList.remove('sunrise'); // CRITICAL: Remove class to prevent re-trigger on next state change
+                    hudHealth.classList.remove('hidden');
+                    hudScore.classList.remove('hidden');
+                    crosshair.classList.remove('hidden');
+                    // FIX 2: Directly lock controls after the fade-out, relying on the user's initial click.
+                    controls.lock(); 
+                }, 1500);
+            });
+
+            // 2. Pause Screen click to resume
+            pauseScreen.addEventListener('click', () => {
+                SoundSystem.init(); // Resume audio context
+                controls.lock();
+            });
+
+            // 3. Retry Button
+            retryBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); 
+                resetGame();
+                // Game re-lock happens on the next screen click (handled by renderer.domElement listener)
+            });
+
+            // 4. Pointer Lock Events
+            controls.addEventListener('lock', () => {
+                pauseScreen.style.display = 'none';
+                wastedScreen.classList.add('hidden');
+                wastedScreen.classList.remove('active');
+                
+                // FIX: Only set isGameActive to true when lock is successful
+                isGameActive = true;
+                
+                isWasted = false;
+                // Reset render filters
+                renderer.domElement.style.filter = "none";
+                
+                // Ensure damage overlay is clean before starting game
+                document.getElementById('damage-overlay').classList.remove('death-flash');
+                document.getElementById('damage-overlay').style.boxShadow = `inset 0 0 0 0 red`; // Explicit cleanup
+
+                lastTime = performance.now();
+                // SoundSystem.init() is now in the landingBtn click handler
+                // Re-enabling API calls for full experience:
+                fetchNewWhispers();
+                setTimeout(generateVoidVoice, 3000);
+            });
+            
+
+            controls.addEventListener('unlock', () => {
+                // When unlocked, disable game loop unless it's due to the Wasted screen
+                if (!isWasted) isGameActive = false; 
+                
+                if(health > 0 && landingPage.style.display === 'none' && !isWasted) {
+                    pauseScreen.style.display = 'block';
+                }
+                
+                // If the game is over and unlocked, make the entire screen clickable to re-lock.
+                if (isWasted) {
+                    document.getElementById('ui-layer').style.pointerEvents = 'auto';
+                    document.getElementById('wasted-screen').style.cursor = 'pointer';
+                }
+                
+                // FIX: IMMEDIATELY stop timers when control is lost to prevent background API calls from crashing the next state
+                chatterTimer = Infinity;
+                voiceTimer = Infinity;
+            });
+
+            // UPDATED: Calls the fallback ghost directly, ignoring FBX loading logic.
+            createFallbackGhost(); 
+            
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function createParticles() {
+            const particleCount = 200;
+            const geometry = new THREE.BufferGeometry();
+            const positions = [];
+            
+            for (let i = 0; i < particleCount; i++) {
+                const x = (Math.random() - 0.5) * 60;
+                const y = (Math.random() - 0.5) * 30; 
+                const z = (Math.random() - 0.5) * 60;
+                positions.push(x, y, z);
+            }
+            
+            geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+            
+            const material = new THREE.PointsMaterial({ 
+                color: 0xcc00cc, 
+                size: 0.1,
+                transparent: true,
+                opacity: 0.6
+            });
+            
+            particlesMesh = new THREE.Points(geometry, material);
+            scene.add(particlesMesh);
+        }
+
+        // --- GEMINI API HELPERS (Handles retries with exponential backoff) ---
+
+        async function fetchWithRetry(url, options, maxRetries = 5) {
+            for (let i = 0; i < maxRetries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) return response;
+                } catch (error) {
+                    // console.error(`Fetch attempt ${i + 1} failed:`, error); // Do not log errors per instructions
+                }
+                const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+                if (i < maxRetries - 1) await new Promise(resolve => setTimeout(resolve, delay));
+            }
+            throw new Error("Maximum retries reached for API call.");
+        }
+
+
+        // --- GEMINI LLM FUNCTIONS ---
+
+        async function fetchNewWhispers() {
+            if (!isGameActive) return; // CRITICAL FIX 1: Exit immediately if game is inactive
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: "Generate 5 short, glitchy, distorted phrases (max 5 words each) that an Enderman from Minecraft might whisper in a horror game. Format: JSON array of strings."
+                            }]
+                        }],
+                        generationConfig: { responseMimeType: "application/json" }
+                    })
+                });
+
+                if (!isGameActive) return; // CRITICAL FIX 2: Check again after awaiting fetch
+                const data = await response.json();
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts) {
+                    const text = data.candidates[0].content.parts[0].text;
+                    try {
+                        const newLines = JSON.parse(text);
+                        if (Array.isArray(newLines) && newLines.length > 0) {
+                            whisperCache = newLines;
+                        }
+                    } catch (e) { console.error("Whisper API: Error parsing JSON response.") } // FIX: Added error log
+                }
+            } catch (e) { console.error("Whisper API: Error fetching content.") } // FIX: Added error log
+        }
+
+        async function generateVoidVoice() {
+            if (!isGameActive) return; // CRITICAL FIX 1: Exit immediately if game is inactive
+            let phrase = "I see you"; // Default fallback
+            try {
+                // 1. Generate text phrase
+                const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                const textResponse = await fetchWithRetry(textApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: "Generate 1 very short, terrifying 3-4 word phrase for a horror game audio hallucination. Do not use quotes." }]
+                        }]
+                    })
+                });
+                
+                if (!isGameActive) return; // CRITICAL FIX 2: Check again after awaiting fetch
+                const textData = await textResponse.json();
+                if (textData.candidates && textData.candidates[0].content.parts[0].text) {
+                    phrase = textData.candidates[0].content.parts[0].text.trim();
+                }
+
+                // 2. Generate TTS audio for the phrase
+                const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+                const ttsResponse = await fetchWithRetry(ttsApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: phrase }] }],
+                        generationConfig: {
+                            responseModalities: ["AUDIO"],
+                            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } }
+                        }
+                    })
+                });
+
+                if (!isGameActive) return; // CRITICAL FIX 3: Check again after awaiting fetch
+                const ttsData = await ttsResponse.json();
+                if (ttsData.candidates && ttsData.candidates[0].content && ttsData.candidates[0].content.parts[0].inlineData) {
+                    const audioBase64 = ttsData.candidates[0].content.parts[0].inlineData.data;
+                    SoundSystem.playGeminiAudio(audioBase64, 24000); 
+                }
+            } catch (e) { console.error("Voice API: Error in TTS generation.") } // FIX: Added error log
+        }
+
+        async function generateDeathMessage(finalScore) {
+            const deathEl = document.getElementById('death-message');
+            deathEl.innerText = "The void is speaking...";
+            deathEl.style.color = "#ffff00"; 
+
+            try {
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+                
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: `The player died in a survival horror game fighting Endermen. They defeated ${finalScore} enemies and reached level ${currentLevel}. Write a 1-sentence dark, cryptic epitaph or "Game Over" message for them. Mention 'The End' or 'staring'.` }]
+                        }]
+                    })
+                });
+
+                if (!isWasted) return; // FIX: Ensure we only process if still on the wasted screen
+                
+                const data = await response.json();
+                if (data.candidates && data.candidates.length > 0 && data.candidates[0].content && data.candidates[0].content.parts) {
+                    const story = data.candidates[0].content.parts[0].text;
+                    // FIX: Ensure the final death message shown on the screen is updated correctly
+                    document.getElementById('death-message').innerText = story + " ✨";
+                    document.getElementById('death-message').style.color = "#ea8df7"; 
+                } else {
+                    document.getElementById('death-message').innerText = "The signal was interrupted.";
+                }
+            } catch (e) {
+                document.getElementById('death-message').innerText = "Signal Lost.";
+            }
+        }
+
+
+        // --- GAMEPLAY CONTINUED ---
+
+        function createGun() {
+            gunModel = new THREE.Group();
+            const bodyMat = new THREE.MeshBasicMaterial({ color: 0x333333 });
+            const armMat = new THREE.MeshBasicMaterial({ color: 0x00aaaa }); 
+            
+            const armGeo = new THREE.BoxGeometry(0.15, 0.15, 0.8);
+            const arm = new THREE.Mesh(armGeo, armMat);
+            arm.position.set(0, -0.1, 0.4); 
+            
+            const bodyGeo = new THREE.BoxGeometry(0.15, 0.15, 0.6);
+            const body = new THREE.Mesh(bodyGeo, bodyMat);
+            const barrelGeo = new THREE.BoxGeometry(0.05, 0.05, 0.2);
+            const barrelMat = new THREE.MeshBasicMaterial({ color: 0x111111 });
+            const barrel = new THREE.Mesh(barrelGeo, barrelMat);
+            barrel.position.z = -0.4;
+            const magGeo = new THREE.BoxGeometry(0.05, 0.15, 0.1);
+            const magMat = new THREE.MeshBasicMaterial({ color: 0x222222 });
+            const mag = new THREE.Mesh(magGeo, magMat);
+            mag.position.set(0.1, -0.05, 0);
+
+            gunModel.add(arm);
+            gunModel.add(body);
+            gunModel.add(barrel);
+            gunModel.add(mag);
+            gunModel.position.set(0.3, -0.25, -0.5);
+            camera.add(gunModel);
+        }
+
+        // Function that creates the fallback ghost geometry and materials
+        function createFallbackGhost() {
+            // Changed blackMat to deep violet for better contrast
+            const group = new THREE.Group();
+            const blackMat = new THREE.MeshStandardMaterial({ color: 0x4a148c }); // Deep Violet
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff00ff }); // Vivid Neon Purple
+
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), blackMat);
+            head.position.y = 2.9;
+            const leftEye = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.05), eyeMat);
+            leftEye.position.set(-0.2, 2.9, 0.26);
+            const rightEye = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.05, 0.05), eyeMat);
+            rightEye.position.set(0.2, 2.9, 0.26);
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 1.0, 0.25), blackMat);
+            torso.position.y = 2.1;
+            const armGeo = new THREE.BoxGeometry(0.1, 1.5, 0.1);
+            const leftArm = new THREE.Mesh(armGeo, blackMat);
+            leftArm.position.set(-0.4, 2.0, 0);
+            leftArm.rotation.z = 0.1;
+            const rightArm = new THREE.Mesh(armGeo, blackMat);
+            rightArm.position.set(0.4, 2.0, 0);
+            rightArm.rotation.z = -0.1;
+            const legGeo = new THREE.BoxGeometry(0.12, 1.6, 0.12);
+            const leftLeg = new THREE.Mesh(legGeo, blackMat);
+            leftLeg.position.set(-0.15, 0.8, 0);
+            const rightLeg = new THREE.Mesh(legGeo, blackMat);
+            rightLeg.position.set(0.15, 0.8, 0);
+
+            group.add(head, leftEye, rightEye, torso, leftArm, rightArm, leftLeg, rightLeg);
+            ghostModel = group;
+        }
+        
+        // REMOVED: The unused loadGhost function since it relied on the FBXLoader which fails locally.
+
+        function getGhostSpeed() {
+            return BASE_GHOST_SPEED + (currentLevel - 1) * 0.5;
+        }
+
+        function spawnGhost() {
+            if (!ghostModel) return;
+            const ghost = ghostModel.clone();
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 20 + Math.random() * 10;
+            ghost.position.set(Math.cos(angle) * radius, -2, Math.sin(angle) * radius);
+            ghost.lookAt(camera.position.x, -2, camera.position.z);
+            
+            let hp = 5;
+            if (currentLevel >= 3) hp += (currentLevel - 2) * 2;
+
+            ghost.userData = { health: hp, id: Math.random(), isEnemy: true, bubble: null, bubbleLife: 0 };
+            scene.add(ghost);
+            ghosts.push(ghost);
+        }
+
+        // UPDATED: Now accepts a specific target to guarantee hits
+        function shoot(target) {
+            SoundSystem.playShoot();
+            const flash = document.getElementById('flash');
+            flash.style.opacity = 0.8;
+            setTimeout(() => flash.style.opacity = 0, 50);
+            
+            const crosshair = document.getElementById('crosshair');
+            crosshair.classList.add('firing');
+            setTimeout(() => crosshair.classList.remove('firing'), 100);
+
+            gunModel.position.z += 0.2;
+
+            // If a target was passed from auto-aim, hit it directly
+            if (target) {
+                if (target.userData.isEnemy) {
+                    SoundSystem.playHit();
+                    target.userData.health -= 1;
+                    
+                    // Pushback effect
+                    const pushDir = camera.getWorldDirection(new THREE.Vector3()).multiplyScalar(0.5);
+                    target.position.add(pushDir);
+                    
+                    // Flash red on hit
+                    target.traverse((child) => {
+                        if (child.isMesh) {
+                            if (!child.userData.origColor) child.userData.origColor = child.material.color.getHex();
+                            child.material = child.material.clone();
+                            child.material.emissive = new THREE.Color(0xff0000);
+                            setTimeout(() => {
+                                if(child.material) child.material.emissive = new THREE.Color(0x000000);
+                            }, 100);
+                        }
+                    });
+
+                    if (target.userData.health <= 0) killGhost(target);
+                }
+            }
+        }
+
+        function killGhost(ghost) {
+            try {
+                if (ghost.userData.bubble && ghost.userData.bubble.parentNode) {
+                    ghost.userData.bubble.parentNode.removeChild(ghost.userData.bubble);
+                }
+                scene.remove(ghost);
+                ghosts = ghosts.filter(g => g !== ghost);
+                score++;
+                document.getElementById('score-hud').innerText = `KILLS: ${score}`;
+                if (score >= killsToNextLevel) levelUp();
+            } catch (e) {
+                console.error("Error killing ghost:", e);
+            }
+        }
+
+        function levelUp() {
+            currentLevel++;
+            killsToNextLevel += currentLevel * 5; 
+            document.getElementById('level-hud').innerText = `LEVEL: ${currentLevel}`;
+            const overlay = document.getElementById('level-up-msg');
+            overlay.style.opacity = 1;
+            setTimeout(() => overlay.style.opacity = 0, 2000);
+            SoundSystem.playLevelUp();
+        }
+
+        function triggerGhostChatter() {
+            if (ghosts.length === 0) return;
+            const randomGhost = ghosts[Math.floor(Math.random() * ghosts.length)];
+            const text = whisperCache[Math.floor(Math.random() * whisperCache.length)];
+            const bubble = document.createElement('div');
+            bubble.className = 'ghost-speech';
+            bubble.innerText = text;
+            document.getElementById('bubble-container').appendChild(bubble);
+            randomGhost.userData.bubble = bubble;
+            randomGhost.userData.bubbleLife = 2000; 
+            fetchNewWhispers(); // Allow fetching new whispers in background
+        }
+
+        function updateBubbles(deltaMs) {
+            const screenW = window.innerWidth;
+            const screenH = window.innerHeight;
+            ghosts.forEach(ghost => {
+                if (ghost.userData.bubble) {
+                    ghost.userData.bubbleLife -= deltaMs;
+                    if (ghost.userData.bubbleLife <= 0) {
+                        if(ghost.userData.bubble.parentNode) ghost.userData.bubble.parentNode.removeChild(ghost.userData.bubble);
+                        ghost.userData.bubble = null;
+                        return;
+                    }
+                    const pos = ghost.position.clone();
+                    pos.y += 3.0; 
+                    pos.project(camera);
+                    if (pos.z < 1) {
+                        const x = (pos.x * .5 + .5) * screenW;
+                        const y = (pos.y * -.5 + .5) * screenH;
+                        ghost.userData.bubble.style.display = 'block';
+                        ghost.userData.bubble.style.left = `${x}px`;
+                        ghost.userData.bubble.style.top = `${y}px`;
+                        ghost.userData.bubble.style.opacity = Math.min(1, ghost.userData.bubbleLife / 500);
+                    } else {
+                        ghost.userData.bubble.style.display = 'none';
+                    }
+                }
+            });
+        }
+
+        function updateGhosts(delta) {
+            if (isWasted) return; // Pause logic on death
+
+            // Use the player's new height for targeting
+            const playerPos = new THREE.Vector3(camera.position.x, PLAYER_HEIGHT, camera.position.z); 
+            const speed = getGhostSpeed();
+            for (let i = ghosts.length - 1; i >= 0; i--) {
+                const ghost = ghosts[i];
+                const dir = new THREE.Vector3().subVectors(playerPos, ghost.position).normalize();
+                ghost.position.add(dir.multiplyScalar(speed * delta));
+                ghost.lookAt(playerPos);
+                ghost.position.y = -2 + Math.sin(Date.now() * 0.01 + ghost.userData.id) * 0.1;
+                const dist = ghost.position.distanceTo(playerPos);
+                // Collision radius 2.0
+                if (dist < 2.0) { 
+                    takeDamage(10);
+                    ghost.position.sub(dir.multiplyScalar(3)); 
+                }
+            }
+        }
+
+        function takeDamage(amount) {
+            if (isWasted) return;
+            health -= amount;
+            SoundSystem.playHurt();
+            if (health < 0) health = 0;
+            document.getElementById('health-val').innerText = health;
+            document.getElementById('health-bar').style.width = `${health}%`;
+            
+            // Red damage flash overlay (Normal in-game hit feedback)
+            const overlay = document.getElementById('damage-overlay');
+            // Ensure any previous death-flash is removed before applying hit flash
+            overlay.classList.remove('death-flash');
+            overlay.style.boxShadow = `inset 0 0 50px 20px rgba(255, 0, 0, 0.5)`;
+            setTimeout(() => overlay.style.boxShadow = `inset 0 0 0 0 red`, 200);
+            
+            if (health <= 0) endGame();
+        }
+
+        function checkAutoAim() {
+            if (isWasted) return;
+            if (gunCooldownTimer > 0) return;
+            
+            // Corrected raycaster call to target only ghosts for auto-aim
+            raycaster.setFromCamera(screenCenter, camera);
+            const intersects = raycaster.intersectObjects(ghosts, true);
+
+            if (intersects.length > 0) {
+                // Traverse up to find the actual Ghost Group object from the mesh hit
+                let hitObj = intersects[0].object;
+                while(hitObj.parent && hitObj.parent !== scene) hitObj = hitObj.parent;
+                
+                // Now check properties on the Group object
+                if (hitObj.userData.isEnemy && intersects[0].distance < GUN_RANGE) {
+                    shoot(hitObj); // Pass the confirmed target directly to shoot
+                    gunCooldownTimer = GUN_COOLDOWN;
+                }
+            }
+        }
+
+        function endGame() {
+            if (isWasted) return; // Prevent double trigger
+            isWasted = true;
+            
+            // FINAL DEATH FLASH (Single, short shock effect)
+            const overlay = document.getElementById('damage-overlay');
+            overlay.classList.add('death-flash'); // Use class for instant styling
+            setTimeout(() => overlay.classList.remove('death-flash'), 300); // Remove class quickly
+
+            // Delay unlock slightly to let visual effects start
+            setTimeout(controls.unlock, 100); 
+            
+            SoundSystem.playWasted();
+            
+            // GTA Wasted Effect
+            renderer.domElement.style.filter = "grayscale(100%)";
+            
+            // Save the new score before displaying the board
+            const updatedScores = saveScoreboard(score, currentLevel); 
+
+            // Show Screen after brief delay
+            setTimeout(() => {
+                const wastedScreen = document.getElementById('wasted-screen');
+                wastedScreen.classList.remove('hidden');
+                wastedScreen.classList.add('active'); // Triggers CSS animations
+                
+                // Update Wasted screen details
+                document.getElementById('wasted-player-name').innerText = playerName; // NEW
+                document.getElementById('final-score').innerText = `KILLS: ${score}`;
+                document.getElementById('final-level').innerText = `REACHED LEVEL ${currentLevel}`;
+                
+                // Show hint to click the screen to re-lock controls
+                document.getElementById('death-message').innerText = "The void is staring. (Click to resume hunting) ✨";
+
+            }, 100);
+
+            document.getElementById('bubble-container').innerHTML = '';
+            generateDeathMessage(score);
+        }
+
+        function resetGame() {
+            // Must be first thing to prevent race conditions during reset
+            isWasted = false; 
+            
+            // FIX: Set isGameActive to false immediately on reset. It will be set back to true on the next successful lock.
+            isGameActive = false; 
+            
+            renderer.domElement.style.filter = "none"; // Remove grayscale
+            
+            // Clean up ghosts and bubbles
+            ghosts.forEach(g => {
+                if (g.userData.bubble && g.userData.bubble.parentNode) {
+                    g.userData.bubble.parentNode.removeChild(g.userData.bubble);
+                }
+                scene.remove(g);
+            });
+            ghosts = [];
+            
+            // Reset state
+            health = 100;
+            score = 0;
+            spawnTimer = 0;
+            currentLevel = 1;
+            killsToNextLevel = 5; // Reset to higher starting target
+            
+            // FIX: Reset timers to 0 so they can start fresh on lock
+            chatterTimer = 0; 
+            voiceTimer = 0;
+
+            // FIX: Explicitly ensure the damage overlay is clean
+            document.getElementById('damage-overlay').classList.remove('death-flash');
+            document.getElementById('damage-overlay').style.boxShadow = `inset 0 0 0 0 red`;
+            
+            // FIX: Reset death message to placeholder before API call returns
+            document.getElementById('death-message').innerText = "Calculating your fate...";
+
+            // FIX: Explicitly ensure the wasted screen is hidden (improves reliability)
+            document.getElementById('wasted-screen').classList.add('hidden');
+            document.getElementById('wasted-screen').classList.remove('active');
+            
+            // Ensure UI layer is back to default (pointer events pass through)
+            document.getElementById('ui-layer').style.pointerEvents = 'none';
+            document.getElementById('wasted-screen').style.cursor = 'default';
+
+
+            document.getElementById('health-val').innerText = health;
+            document.getElementById('health-bar').style.width = `100%`;
+            document.getElementById('score-hud').innerText = `KILLS: 0`;
+            document.getElementById('level-hud').innerText = `LEVEL: 1`;
+            
+            camera.position.set(0, PLAYER_HEIGHT, 0); // Reset camera to new fixed height
+            
+            // Update Scoreboard view on reset
+            renderScoreboard(loadScoreboard());
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            // SAFEGUARD: Wrap the entire loop logic in try-catch to prevent total freeze
+            try {
+                if (particlesMesh && particlesMesh.geometry && particlesMesh.geometry.attributes && particlesMesh.geometry.attributes.position) {
+                    const positions = particlesMesh.geometry.attributes.position.array;
+                    for(let i=1; i<positions.length; i+=3) {
+                        positions[i] += 0.05;
+                        if(positions[i] > 15) positions[i] = -2;
+                    }
+                    particlesMesh.geometry.attributes.position.needsUpdate = true;
+                }
+
+                if (!isGameActive) return;
+
+                const time = performance.now();
+                // Slow Motion on Death
+                const delta = isWasted ? (time - lastTime) / 10000 : (time - lastTime) / 1000;
+                lastTime = time;
+                
+                updateMovement(delta); // NEW: Handle player movement
+
+                if (!isWasted) {
+                    spawnTimer += delta * 1000;
+                    let rateMod = (score * 50) + (currentLevel * 200);
+                    const currentSpawnRate = Math.max(400, BASE_SPAWN_RATE - rateMod); 
+                    
+                    if (spawnTimer > currentSpawnRate) {
+                        spawnGhost();
+                        spawnTimer = 0;
+                    }
+
+                    chatterTimer += delta * 1000;
+                    if (chatterTimer > CHATTER_INTERVAL) {
+                        try {
+                            triggerGhostChatter();
+                        } catch(e) { console.warn("Chatter error", e); }
+                        chatterTimer = 0;
+                    }
+
+                    voiceTimer += delta * 1000;
+                    if (voiceTimer > VOICE_INTERVAL) {
+                        // RE-ENABLED FOR FULL EXPERIENCE
+                        try { generateVoidVoice(); } catch(e) { console.warn("Voice error", e); }
+                        voiceTimer = 0;
+                    }
+                }
+                
+                try {
+                    updateGhosts(delta);
+                } catch (e) { console.error("Ghost update error", e); }
+                
+                updateBubbles(delta * 1000); 
+                
+                if (gunCooldownTimer > 0) gunCooldownTimer--;
+                
+                try {
+                    checkAutoAim();
+                } catch (e) { console.error("AutoAim error", e); }
+
+                if (gunModel) {
+                    // Gun bobbing/recoil effect
+                    gunModel.position.z = THREE.MathUtils.lerp(gunModel.position.z, -0.5, 0.1);
+                    gunModel.position.y = -0.25 + Math.sin(time * 0.002) * 0.005;
+                    gunModel.position.x = 0.3 + Math.cos(time * 0.002) * 0.005;
+                }
+
+                renderer.render(scene, camera);
+            } catch(e) {
+                console.error("Animation Loop Error:", e);
+            }
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Initialize the game immediately after script definition.
+        try {
+            init();
+            animate(); // Start the rendering loop immediately
+        } catch (error) {
+            console.error("Game Initialization Failed:", error);
+            
+            // Show a friendly message if Three.js init failed entirely.
+            const loadingStatus = document.getElementById('loading-status');
+            const landingPage = document.getElementById('landing-page');
+            
+            if(loadingStatus && landingPage) {
+                loadingStatus.innerText = "Fatal Error: Check console for details. (Likely API/Network related after starting)";
+                document.getElementById('landing-btn').disabled = true;
+                landingPage.style.display = 'flex'; // Ensure landing page is visible
+            }
+        }
+
+
+    </script>
+</body>
+</html>
